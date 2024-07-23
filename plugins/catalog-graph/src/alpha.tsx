@@ -24,7 +24,7 @@ import {
   compatWrapper,
   convertLegacyRouteRef,
 } from '@backstage/core-compat-api';
-import { createEntityCardExtension } from '@backstage/plugin-catalog-react/alpha';
+import { EntityCardBlueprint } from '@backstage/plugin-catalog-react/alpha';
 import { catalogGraphRouteRef, catalogEntityRouteRef } from './routes';
 import { Direction } from './components';
 
@@ -46,24 +46,73 @@ function getEntityGraphRelationsConfigSchema(
   });
 }
 
-const CatalogGraphEntityCard = createEntityCardExtension({
+const CatalogGraphEntityCard = EntityCardBlueprint.make({
   name: 'relations',
-  configSchema: createSchemaFromZod(z =>
+  configSchema: origSchema =>
+    createSchemaFromZod(z =>
+      z
+        .object({
+          // Filter is a config required to all entity cards
+          // filter: z.string().optional(),
+          title: z.string().optional(),
+          height: z.number().optional(),
+          // Skipping a "variant" config for now, defaulting to "gridItem" in the component
+          // For more details, see this comment: https://github.com/backstage/backstage/pull/22619#discussion_r1477333252
+        })
+        .merge(getEntityGraphRelationsConfigSchema(z))
+        .merge(origSchema),
+    ),
+  configSchema: ({ z }, origSchema) =>
     z
       .object({
-        // Filter is a config required to all entity cards
-        filter: z.string().optional(),
         title: z.string().optional(),
         height: z.number().optional(),
         // Skipping a "variant" config for now, defaulting to "gridItem" in the component
         // For more details, see this comment: https://github.com/backstage/backstage/pull/22619#discussion_r1477333252
       })
-      .merge(getEntityGraphRelationsConfigSchema(z)),
-  ),
-  loader: async ({ config: { filter, ...props } }) =>
-    import('./components/CatalogGraphCard').then(m =>
-      compatWrapper(<m.CatalogGraphCard {...props} />),
-    ),
+      .merge(getEntityGraphRelationsConfigSchema(z))
+      .merge(origSchema),
+
+  configSchema: {
+    inherit: true,
+    schema: ({ z }) =>
+      z.object({
+        title: z.string().optional(),
+        height: z.number().optional(),
+
+        // Skipping a "variant" config for now, defaulting to "gridItem" in the component
+        // For more details, see this comment: https://github.com/backstage/backstage/pull/22619#discussion_r1477333252
+      }),
+  },
+  configSchema: ({ z }) => ({
+    title: z.string().optional(),
+    height: z.number().optional(),
+  }),
+  config: {
+    schema: ({ z }) => ({
+      title: z.string().optional(),
+      height: z.number().optional(),
+    }),
+  },
+  configSchema: {
+    title: z => z.string().optional(),
+    height: z => z.number().optional(),
+  },
+  configSchema: ({ z }) =>
+    z.object({
+      title: z.string().optional(),
+      title: EntityCardBlueprint.configSchema.title,
+      height: z.number().optional(),
+      heightX2: originaSchema.height.min(2),
+    }),
+  factory(origFactory, { config: { filter: _, ...props } }) {
+    return origFactory({
+      loader: async () =>
+        import('./components/CatalogGraphCard').then(m =>
+          compatWrapper(<m.CatalogGraphCard {...props} />),
+        ),
+    });
+  },
 });
 
 const CatalogGraphPage = createPageExtension({
