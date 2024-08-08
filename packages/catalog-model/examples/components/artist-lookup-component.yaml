@@ -7,7 +7,7 @@ metadata:
     - java
     - data
   links:
-    - url: https://example.com/user
+    - url: https://example1.com/user
       title: Examples Users
       icon: user
     - url: https://example.com/group
